@@ -9,7 +9,7 @@ import {
     copyFile,
     readFile,
     unlink,
-    rmdir,
+    rm,
     writeFile,
     mkdtemp,
     access,
@@ -29,7 +29,7 @@ export const copy = promisify(copyFile);
 export const fsRead = promisify(readFile);
 export const fsWrite = promisify(writeFile);
 export const fsRemove = promisify(unlink);
-export const fsRemoveDir = promisify(rmdir);
+export const fsRemoveDir = promisify(rm);
 export const fsMakeDir = promisify(mkdir);
 export const fsMakeTempDir = promisify(mkdtemp);
 export const fsReadDir = promisify(readdir);
@@ -217,7 +217,7 @@ export const prepareEnvironment = async (): Promise<CLITestEnvironment> => {
             return await fsRemove(relative(path));
         };
         const removeDir = async (path: string) => {
-            return await fsRemoveDir(relative(path));
+            return await fsRemoveDir(relative(path), { recursive: true });
         };
         const ls = async (path?: string) => {
             return await fsReadDir(path ? relative(path) : tempDir);
