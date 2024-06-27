@@ -38,6 +38,7 @@ describe('Tests testing the CLI and so, the testing lib itself', () => {
                   "Commands:",
                   "testing-cli-entry.js print [input]  print a string",
                   "testing-cli-entry.js text           ask text input",
+                  "testing-cli-entry.js error          exit with error",
                   "testing-cli-entry.js select         ask select input",
                   "Options:",
                   "--help     Show help                                             [boolean]",
@@ -139,6 +140,7 @@ describe('Tests testing the CLI and so, the testing lib itself', () => {
                               "Commands:",
                               "testing-cli-entry.js print [input]  print a string",
                               "testing-cli-entry.js text           ask text input",
+                              "testing-cli-entry.js error          exit with error",
                               "testing-cli-entry.js select         ask select input",
                               "Options:",
                               "--help     Show help                                             [boolean]",
@@ -240,6 +242,39 @@ describe('Tests testing the CLI and so, the testing lib itself', () => {
                 ]
             ]).toContainEqual(getStdout());
             expect(getExitCode()).toBe(0);
+
+            await cleanup();
+        });
+
+        it('should ask for text and continue with process exits early', async () => {
+            const { spawn, cleanup } = await prepareEnvironment();
+
+            const {
+                waitForText,
+                writeText,
+                getStderr,
+                getExitCode,
+                waitForFinish,
+            } = await spawn('node', './test/testing-cli-entry.js error');
+
+            expect(getExitCode()).toBeNull();
+
+            await waitForText('Missing Text', 100);
+            await writeText('input');
+
+            await waitForFinish();
+
+            await waitForText('Missing Text', 10000);
+            
+            expect(getStderr()).toMatchInlineSnapshot(`
+                [
+                  "An error occurred",
+                ]
+            `);
+
+
+
+            expect(getExitCode()).toBe(1);
 
             await cleanup();
         });

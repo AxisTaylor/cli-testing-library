@@ -4,8 +4,10 @@ import { KeyMap } from './keyToHEx';
 export type SpawnResult = {
     wait: (delay: number) => Promise<void>;
     waitForText: (
-        output: string
-    ) => Promise<{ line: string; type: 'stdout' | 'stderr' }>;
+        output: string,
+        timeout?: number,
+        ignoreExit?: boolean
+    ) => Promise<{ line: string; type: "output" | "timeout" | "exit" }>;
     waitForFinish: () => Promise<ExecResult>;
     writeText: (input: string) => Promise<void>;
     getStdout: () => string[];

@@ -107,19 +107,49 @@ export const prepareEnvironment = async (): Promise<CLITestEnvironment> => {
             currentProcessPromise = scopedExecute(runner, command, runFrom);
 
             const waitForText = (
-                input: string
-            ): Promise<{ line: string; type: OutputType }> => {
+                input: string,
+                timeout: number = 5000,
+                ignoreExit: boolean = false
+            ): Promise<{ line: string; type: "output" | "timeout" | "exit" }> => {
                 return new Promise((resolve) => {
+                    let timeoutId: NodeJS.Timeout;
+                    timeoutId = setTimeout(() => {
+                        resolve({
+                            type: 'timeout',
+                            line: '',
+                        });
+
+                        output.off(handler);
+                    }, timeout);
+
                     const handler = (value: string) => {
                         if (value.toString().includes(input)) {
                             resolve({
-                                type: 'stdout',
+                                type: 'output',
                                 line: value.toString(),
                             });
 
+                            timeoutId && clearTimeout(timeoutId);
+                            output.off(handler);
+                        } else if (!ignoreExit && exitCodeRef.current !== null) {
+                            resolve({
+                                type: 'exit',
+                                line: value.toString(),
+                            });
+
+                            timeoutId && clearTimeout(timeoutId);
                             output.off(handler);
                         }
                     };
+                    
+                    if (!ignoreExit && exitCodeRef.current !== null) {
+                        resolve({
+                            type: 'exit',
+                            line: '',
+                        });
+                        timeoutId && clearTimeout(timeoutId);
+                        return;
+                    }
 
                     output.on(handler);
                 });
@@ -135,7 +165,6 @@ export const prepareEnvironment = async (): Promise<CLITestEnvironment> => {
 
                     return currentProcessPromise;
                 }
-
                 return new Promise((resolve) => {
                     resolve({
                         code: exitCodeRef.current as ExitCode,
