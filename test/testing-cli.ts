@@ -28,6 +28,10 @@ yargs(hideBin(process.argv))
 
         console.log(`Answered: ${number}`);
     })
+    .command('error', 'exit with error', () => {
+        console.error('An error occurred');
+        process.exit(1);
+    })
     .command('select', 'ask select input', async () => {
         const { option } = await prompts({
             type: 'select',
