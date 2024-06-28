@@ -7,7 +7,7 @@ export type SpawnResult = {
         output: string,
         timeout?: number,
         ignoreExit?: boolean
-    ) => Promise<{ line: string; type: "output" | "timeout" | "exit" }>;
+    ) => Promise<{ line: string; type: "found" | "timeout" | "exit" }>;
     waitForFinish: () => Promise<ExecResult>;
     writeText: (input: string) => Promise<void>;
     getStdout: () => string[];
@@ -19,6 +19,7 @@ export type SpawnResult = {
 };
 
 export type CLITestEnvironment = {
+    jobId: string;
     path: string;
     cleanup: () => Promise<void>;
     writeFile: (path: string, content: string) => Promise<void>;

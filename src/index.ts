@@ -24,6 +24,9 @@ import { Output, OutputType } from './Output';
 import { checkRunningProcess } from './utils';
 import { createExecute, ExecResult, ExitCode } from './createExecute';
 import { keyToHEx, KeyMap } from './keyToHEx';
+import { v4 } from 'uuid';
+
+export type * from './types';
 
 export const copy = promisify(copyFile);
 export const fsRead = promisify(readFile);
@@ -36,31 +39,85 @@ export const fsReadDir = promisify(readdir);
 export const fsAccess = promisify(access);
 export const relative = (p: string) => path.resolve(__dirname, p);
 
+type Task = { current: ChildProcessWithoutNullStreams | null };
+type CleanupStatus = { current: boolean };
+
+type Job = {
+    id: string;
+    tasks: Task[];
+    cleanupStatus: CleanupStatus;
+    dir: string;
+};
+
+
+globalThis.jobs = {};
+declare global {
+    var jobs: Record<string, Job>;
+}
+
+const newJob = (dir: string, cleanupStatusRef: CleanupStatus) => {
+    const id = v4();
+    globalThis.jobs[id] = {
+        id,
+        dir,
+        cleanupStatus: cleanupStatusRef,
+        tasks: [],
+    };
+
+    return id;
+};
+
+const addTasks = (id: string, ...newTasks: Task[]) => {
+    if (!globalThis.jobs[id]) {
+        throw new Error(`Job with id ${id} does not exist`);
+    }
+
+    globalThis.jobs[id].tasks.push(...newTasks);
+}
+
+export const cleanupJob = async (id: string) => {
+    if (!globalThis.jobs[id]) {
+        throw new Error(`Job with id ${id} does not exist`);
+    }
+
+    if (globalThis.jobs[id].cleanupStatus.current) {
+        return;
+    }
+
+    globalThis.jobs[id].cleanupStatus.current = true;
+    globalThis.jobs[id].tasks.forEach((task) => {
+        task.current?.kill(0);
+        task.current?.stdin.end();
+        task.current?.stdin.destroy();
+        task.current?.stdout.destroy();
+        task.current?.stderr.destroy();
+
+        task.current = null;
+    });
+
+    await fsRemoveDir(globalThis.jobs[id].dir, { recursive: true });
+
+    delete globalThis.jobs[id];
+}
+
+export const cleanupAll = async () => {
+    const jobIds = Object.keys(globalThis.jobs);
+
+    for (const id of jobIds) {
+        await cleanupJob(id);
+    }
+}
+
 export const prepareEnvironment = async (): Promise<CLITestEnvironment> => {
-    const hasCalledCleanup: {
-        current: boolean;
-    } = { current: false };
-    const startedTasks: { current: ChildProcessWithoutNullStreams | null }[] =
-        [];
+    const hasCalledCleanup: { current: boolean; } = { current: false };
     const tempDir = await fsMakeTempDir(
         path.join(tmpdir(), 'cli-testing-library-')
     );
+
+    const jobId = newJob(tempDir, hasCalledCleanup);
+
     const relative = (p: string) => path.resolve(tempDir, p);
-    const cleanup = async () => {
-        hasCalledCleanup.current = true;
-
-        startedTasks.forEach((task) => {
-            task.current?.kill(0);
-            task.current?.stdin.end();
-            task.current?.stdin.destroy();
-            task.current?.stdout.destroy();
-            task.current?.stderr.destroy();
-
-            task.current = null;
-        });
-
-        await fsRemoveDir(tempDir, { recursive: true });
-    };
+    const cleanup = () => cleanupJob(jobId);
 
     try {
         const execute = async (
@@ -79,10 +136,11 @@ export const prepareEnvironment = async (): Promise<CLITestEnvironment> => {
                 currentProcessRef
             );
 
-            startedTasks.push(currentProcessRef);
+            addTasks(jobId, currentProcessRef);
 
             return await scopedExecute(runner, command, runFrom);
         };
+        
         const spawn = async (
             runner: string,
             command: string,
@@ -102,7 +160,7 @@ export const prepareEnvironment = async (): Promise<CLITestEnvironment> => {
                 exitCodeRef
             );
 
-            startedTasks.push(currentProcessRef);
+            addTasks(jobId, currentProcessRef);
 
             currentProcessPromise = scopedExecute(runner, command, runFrom);
 
@@ -110,13 +168,13 @@ export const prepareEnvironment = async (): Promise<CLITestEnvironment> => {
                 input: string,
                 timeout: number = 5000,
                 ignoreExit: boolean = false
-            ): Promise<{ line: string; type: "output" | "timeout" | "exit" }> => {
+            ): Promise<{ line: string; type: "found" | "timeout" | "exit" }> => {
                 return new Promise((resolve) => {
                     let timeoutId: NodeJS.Timeout;
                     timeoutId = setTimeout(() => {
                         resolve({
                             type: 'timeout',
-                            line: '',
+                            line: input,
                         });
 
                         output.off(handler);
@@ -125,8 +183,8 @@ export const prepareEnvironment = async (): Promise<CLITestEnvironment> => {
                     const handler = (value: string) => {
                         if (value.toString().includes(input)) {
                             resolve({
-                                type: 'output',
-                                line: value.toString(),
+                                type: 'found',
+                                line: input,
                             });
 
                             timeoutId && clearTimeout(timeoutId);
@@ -134,7 +192,7 @@ export const prepareEnvironment = async (): Promise<CLITestEnvironment> => {
                         } else if (!ignoreExit && exitCodeRef.current !== null) {
                             resolve({
                                 type: 'exit',
-                                line: value.toString(),
+                                line: input,
                             });
 
                             timeoutId && clearTimeout(timeoutId);
@@ -145,7 +203,7 @@ export const prepareEnvironment = async (): Promise<CLITestEnvironment> => {
                     if (!ignoreExit && exitCodeRef.current !== null) {
                         resolve({
                             type: 'exit',
-                            line: '',
+                            line: input,
                         });
                         timeoutId && clearTimeout(timeoutId);
                         return;
@@ -253,6 +311,7 @@ export const prepareEnvironment = async (): Promise<CLITestEnvironment> => {
         };
 
         return {
+            jobId,
             path: tempDir,
             cleanup,
             writeFile,

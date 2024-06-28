@@ -1,9 +1,10 @@
-import { prepareEnvironment } from '../src';
+import { cleanupAll, prepareEnvironment } from '../src';
 
 jest.setTimeout(10000);
 
 describe('Tests testing the CLI and so, the testing lib itself', () => {
     describe('general', () => {
+        afterAll(cleanupAll);
         it('runs with multiple runners', async () => {
             const { execute, cleanup } = await prepareEnvironment();
 
@@ -79,7 +80,7 @@ describe('Tests testing the CLI and so, the testing lib itself', () => {
             const { waitForText, kill, getStderr, getStdout, getExitCode } =
                 await spawn('node', './test/testing-cli-entry.js select');
 
-            await waitForText('Pick option');
+            expect(await waitForText('Pick option')).toBeFoundInOutput();
 
             kill('SIGINT');
 
@@ -221,7 +222,7 @@ describe('Tests testing the CLI and so, the testing lib itself', () => {
                 getExitCode,
             } = await spawn('node', './test/testing-cli-entry.js text');
 
-            await waitForText('Give me a number');
+            expect(await waitForText('Give me a number')).toBeFoundInOutput();
             await writeText('15');
             await pressKey('enter');
             await waitForFinish();
@@ -239,7 +240,13 @@ describe('Tests testing the CLI and so, the testing lib itself', () => {
                     "? Give me a number: › 1? Give me a number: › 15",
                     "✔ Give me a number: … 15",
                     "Answered: 15"
-                ]
+                ],
+                [
+                    "? Give me a number: ›",
+                    "? Give me a number: › 1",
+                    "? Give me a number: › 15✔ Give me a number: … 15",
+                    "Answered: 15"
+                ],
             ]).toContainEqual(getStdout());
             expect(getExitCode()).toBe(0);
 
@@ -259,22 +266,20 @@ describe('Tests testing the CLI and so, the testing lib itself', () => {
 
             expect(getExitCode()).toBeNull();
 
-            await waitForText('Missing Text', 100);
+            expect(await waitForText('An error occurred')).toBeFoundInOutput();
+
+            expect(await waitForText('Missing Text', 100)).queryToTimeOut();
             await writeText('input');
 
-            await waitForFinish();
+            expect(await waitForFinish()).exitCodeToBe(1);
 
-            await waitForText('Missing Text', 10000);
+            expect(await waitForText('Missing Text', 10000)).processToExit();
             
             expect(getStderr()).toMatchInlineSnapshot(`
                 [
                   "An error occurred",
                 ]
             `);
-
-
-
-            expect(getExitCode()).toBe(1);
 
             await cleanup();
         });
@@ -287,7 +292,7 @@ describe('Tests testing the CLI and so, the testing lib itself', () => {
             const { waitForText, waitForFinish, getStdout, pressKey } =
                 await spawn('node', './test/testing-cli-entry.js select');
 
-            await waitForText('Pick option');
+            expect(await waitForText('Pick option')).toBeFoundInOutput();
             await pressKey('arrowDown');
             await pressKey('enter');
             await waitForFinish();

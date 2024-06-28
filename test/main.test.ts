@@ -1,8 +1,10 @@
-import { prepareEnvironment } from '../src';
+import { cleanupAll, prepareEnvironment } from '../src';
 
 jest.setTimeout(10000);
 
 describe('environment utils', () => {
+    afterAll(cleanupAll);
+    
     it('should create empty tempt folder', async () => {
         const { ls, path, cleanup } = await prepareEnvironment();
 

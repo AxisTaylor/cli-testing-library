@@ -2,16 +2,26 @@
   "name": "@axistaylor/cli-testing-library",
   "version": "1.0.1",
   "description": "Small but powerful library for testing CLI the way it is used by people.",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "import": "./lib/esm/index.mjs",
+      "require": "./lib/cjs/index.cjs"
+    },
+    "./jest/extend": {
+      "types": "./lib/types/jest.d.ts",
+      "import": "./lib/esm/jest.mjs",
+      "require": "./lib/cjs/jest.cjs"
+    }
+  },
   "scripts": {
     "dev": "npm run watch:lib",
     "build:cleanup": "rm -rf lib && rm -rf dist",
-    "build:lib": "tsc --project tsconfig.build.json",
+    "build:lib": "rollup -c --bundleConfigAsCjs",
     "build": "npm run build:cleanup && npm run build:lib",
     "build:ci": "npm run build",
     "prepare": "npm run build:lib",
-    "watch:lib": "tsc --watch --project tsconfig.build.json",
+    "watch:lib": "rollup -c --bundleConfigAsCjs --watch",
     "test": "jest test"
   },
   "author": "Georgy Marchuk",
@@ -21,16 +31,25 @@
     "url": "https://github.com/axistaylor/cli-testing-library.git"
   },
   "dependencies": {
-    "keycode": "^2.2.1"
+    "keycode": "^2.2.1",
+    "uuid": "^10.0.0"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^26.0.1",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^11.1.6",
     "@types/jest": "^29.5.12",
     "@types/prompts": "^2.4.9",
+    "@types/uuid": "^10.0.0",
     "@types/yargs": "^17.0.32",
     "concurrently": "^8.2.2",
     "jest": "^29.7.0",
     "prettier": "^3.3.2",
     "prompts": "^2.4.2",
+    "rollup": "^4.18.0",
+    "rollup-plugin-dts": "^6.1.1",
+    "rollup-plugin-peer-deps-external": "^2.2.4",
     "ts-jest": "^29.1.5",
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
