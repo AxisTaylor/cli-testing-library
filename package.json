@@ -1,6 +1,6 @@
 {
   "name": "@axistaylor/cli-testing-library",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Small but powerful library for testing CLI the way it is used by people.",
   "exports": {
     ".": {
