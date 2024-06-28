@@ -268,12 +268,14 @@ describe('Tests testing the CLI and so, the testing lib itself', () => {
 
             expect(await waitForText('An error occurred')).toBeFoundInOutput();
 
-            expect(await waitForText('Missing Text', 100)).queryToTimeOut();
+            expect(await waitForText('Missing Text', { timeout: 100 })).queryToTimeOut();
             await writeText('input');
 
             expect(await waitForFinish()).exitCodeToBe(1);
 
-            expect(await waitForText('Missing Text', 10000)).processToExit();
+            expect(await waitForText('Missing Text', { timeout: 10000 })).processToExit(); 
+
+            expect(await waitForText('An error occurred', { checkHistory: true })).toBeFoundInOutput();
             
             expect(getStderr()).toMatchInlineSnapshot(`
                 [

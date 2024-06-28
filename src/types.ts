@@ -5,8 +5,11 @@ export type SpawnResult = {
     wait: (delay: number) => Promise<void>;
     waitForText: (
         output: string,
-        timeout?: number,
-        ignoreExit?: boolean
+        options?: Partial<{
+            timeout?: number,
+            ignoreExit?: boolean,
+            checkHistory?: boolean,
+        }>,
     ) => Promise<{ line: string; type: "found" | "timeout" | "exit" }>;
     waitForFinish: () => Promise<ExecResult>;
     writeText: (input: string) => Promise<void>;

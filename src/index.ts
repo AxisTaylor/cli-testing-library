@@ -166,10 +166,38 @@ export const prepareEnvironment = async (): Promise<CLITestEnvironment> => {
 
             const waitForText = (
                 input: string,
-                timeout: number = 5000,
-                ignoreExit: boolean = false
+                options: Partial<{
+                    timeout: number,
+                    ignoreExit: boolean,
+                    checkHistory: boolean,
+                }> = {}
             ): Promise<{ line: string; type: "found" | "timeout" | "exit" }> => {
                 return new Promise((resolve) => {
+                    const { timeout, ignoreExit, checkHistory } = {
+                        timeout: 5000,
+                        ignoreExit: false,
+                        checkHistory: false,
+                        ...options,
+                    };
+                    const processExited = exitCodeRef.current !== null;
+
+                    if (checkHistory && String(output.stdout.join('\n') + output.stderr.join('\n')).includes(input)) {
+                        resolve({
+                            type: 'found',
+                            line: input,
+                        });
+                        return;
+                    }
+
+                    
+                    if (!ignoreExit && processExited) {
+                        resolve({
+                            type: 'exit',
+                            line: input,
+                        });
+                        return;
+                    }
+
                     let timeoutId: NodeJS.Timeout;
                     timeoutId = setTimeout(() => {
                         resolve({
@@ -189,7 +217,7 @@ export const prepareEnvironment = async (): Promise<CLITestEnvironment> => {
 
                             timeoutId && clearTimeout(timeoutId);
                             output.off(handler);
-                        } else if (!ignoreExit && exitCodeRef.current !== null) {
+                        } else if (!ignoreExit && processExited) {
                             resolve({
                                 type: 'exit',
                                 line: input,
@@ -200,15 +228,6 @@ export const prepareEnvironment = async (): Promise<CLITestEnvironment> => {
                         }
                     };
                     
-                    if (!ignoreExit && exitCodeRef.current !== null) {
-                        resolve({
-                            type: 'exit',
-                            line: input,
-                        });
-                        timeoutId && clearTimeout(timeoutId);
-                        return;
-                    }
-
                     output.on(handler);
                 });
             };
