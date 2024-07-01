@@ -36,7 +36,8 @@ export type CLITestEnvironment = {
     execute: (
         runner: string,
         command: string,
-        runFrom?: string
+        runFrom?: string,
+        timeout?: number,
     ) => Promise<ExecResult>;
     spawn: (
         runner: string,

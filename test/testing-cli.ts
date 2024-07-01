@@ -45,6 +45,10 @@ yargs(hideBin(process.argv))
 
         console.log(`Picked: ${option}`);
     })
+    .command('wait', 'wait for 5 seconds', async () => {
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+        console.log('Done waiting');
+    })
     .option('verbose', {
         alias: 'v',
         type: 'boolean',

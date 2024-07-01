@@ -4,7 +4,7 @@ import { homedir } from 'os';
 import path from 'path';
 
 export type ExitCode = 0 | 1;
-export type ExecResult = { code: ExitCode; stdout: string[]; stderr: string[] };
+export type ExecResult = { code: ExitCode | null; stdout: string[]; stderr: string[] };
 export const createExecute =
     (
         base: string,

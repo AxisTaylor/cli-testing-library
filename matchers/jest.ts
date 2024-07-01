@@ -27,12 +27,14 @@ declare global {
             queryToTimeOut(): Promise<T>;
             processToExit(): Promise<T>;
             exitCodeToBe(expected: number): Promise<T>;
+            exitCodeToBeNull(): Promise<T>;
         }
         interface ExpectExtendMap {
             toBeFoundInOutput: Matcher<TextSearchResult>;
             queryToTimeOut: Matcher<TextSearchResult>;
             processToExit: Matcher<TextSearchResult>;
             exitCodeToBe: MatcherWithParams<ProcessStats, [expected: number]>;
+            exitCodeToBeNull: Matcher<ProcessStats>;
         }
     }
 }
@@ -111,6 +113,13 @@ export const customMatchers = {
         return {
             pass,
             message: () => `Expected: ${this.utils.printExpected(expected)}\nReceived: ${this.utils.printReceived(received.code)}`
+        };
+    },
+    exitCodeToBeNull(this: jest.MatcherContext, received: ProcessStats) {
+        const pass = this.equals(received.code, null);
+        return {
+            pass,
+            message: () => `Expected: ${this.utils.printExpected(null)}\nReceived: ${this.utils.printReceived(received.code)}`
         };
     },
 };
