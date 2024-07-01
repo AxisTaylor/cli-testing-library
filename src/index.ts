@@ -27,6 +27,9 @@ import { keyToHEx, KeyMap } from './keyToHEx';
 import { v4 } from 'uuid';
 
 export type * from './types';
+export type * from './createExecute';
+export type * from './Output';
+export type * from './keyToHEx';
 
 export const copy = promisify(copyFile);
 export const fsRead = promisify(readFile);
