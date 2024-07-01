@@ -8,18 +8,27 @@ describe('Tests testing the CLI and so, the testing lib itself', () => {
         it('runs with multiple runners', async () => {
             const { execute, cleanup } = await prepareEnvironment();
 
-            const { code } = await execute(
+            expect(await execute(
                 'node',
                 './test/testing-cli-entry.js --help'
-            );
+            )).exitCodeToBe(0);
 
-            const { code: code2 } = await execute(
+            expect(await execute(
                 'ts-node',
                 './test/testing-cli.ts --help'
-            );
+            )).exitCodeToBe(0);
 
-            expect(code2).toBe(0);
-            expect(code).toBe(0);
+            expect(await execute(
+                'ts-node',
+                './test/testing-cli.ts error'
+            )).exitCodeToBe(1);
+
+            expect(await execute(
+                'ts-node',
+                './test/testing-cli.ts wait',
+                undefined,
+                1000,
+            )).exitCodeToBeNull();
 
             await cleanup();
         });
@@ -41,6 +50,7 @@ describe('Tests testing the CLI and so, the testing lib itself', () => {
                   "testing-cli-entry.js text           ask text input",
                   "testing-cli-entry.js error          exit with error",
                   "testing-cli-entry.js select         ask select input",
+                  "testing-cli-entry.js wait           wait for 5 seconds",
                   "Options:",
                   "--help     Show help                                             [boolean]",
                   "--version  Show version number                                   [boolean]",
@@ -66,7 +76,7 @@ describe('Tests testing the CLI and so, the testing lib itself', () => {
             const end = new Date();
             const delay = end.getTime() - start.getTime();
 
-            await waitForFinish();
+            expect(await waitForFinish()).exitCodeToBe(0);
 
             expect(delay).toBeGreaterThan(990);
             expect(delay).toBeLessThan(1010);
@@ -92,7 +102,7 @@ describe('Tests testing the CLI and so, the testing lib itself', () => {
                   "Second",
                 ]
             `);
-            expect(getExitCode()).toBe(null);
+            expect(getExitCode()).toBeNull();
 
             await cleanup();
         });
@@ -107,9 +117,9 @@ describe('Tests testing the CLI and so, the testing lib itself', () => {
                 './test/testing-cli-entry.js --help'
             );
 
-            await waitForFinish();
+            expect(await waitForFinish()).exitCodeToBe(0);
 
-            expect(process.stdout.write).not.toBeCalled();
+            expect(process.stdout.write).not.toHaveBeenCalled();
 
             const { debug, waitForFinish: waitForFinishOnceMore } = await spawn(
                 'node',
@@ -118,9 +128,9 @@ describe('Tests testing the CLI and so, the testing lib itself', () => {
 
             debug();
 
-            await waitForFinishOnceMore();
+            expect(await waitForFinishOnceMore()).exitCodeToBe(0);
 
-            expect(process.stdout.write).toBeCalled();
+            expect(process.stdout.write).toHaveBeenCalled();
 
             await cleanup();
         });
@@ -143,6 +153,7 @@ describe('Tests testing the CLI and so, the testing lib itself', () => {
                               "testing-cli-entry.js text           ask text input",
                               "testing-cli-entry.js error          exit with error",
                               "testing-cli-entry.js select         ask select input",
+                              "testing-cli-entry.js wait           wait for 5 seconds",
                               "Options:",
                               "--help     Show help                                             [boolean]",
                               "--version  Show version number                                   [boolean]",

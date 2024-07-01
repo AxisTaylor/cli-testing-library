@@ -49,7 +49,6 @@ type Job = {
     dir: string;
 };
 
-
 globalThis.jobs = {};
 declare global {
     var jobs: Record<string, Job>;
@@ -123,7 +122,8 @@ export const prepareEnvironment = async (): Promise<CLITestEnvironment> => {
         const execute = async (
             runner: string,
             command: string,
-            runFrom?: string
+            runFrom?: string,
+            timeout?: number
         ) => {
             const output = new Output();
             const currentProcessRef: {
@@ -138,7 +138,22 @@ export const prepareEnvironment = async (): Promise<CLITestEnvironment> => {
 
             addTasks(jobId, currentProcessRef);
 
-            return await scopedExecute(runner, command, runFrom);
+            return new Promise<ExecResult>(async (resolve) => {
+                let timeoutId: NodeJS.Timeout | undefined;
+                if (timeout) {
+                    timeoutId = setTimeout(() => {
+                        resolve({
+                            code: null,
+                            stdout: output.stdout,
+                            stderr: output.stderr,
+                        });
+                    }, timeout);
+                }
+
+                const result = await scopedExecute(runner, command, runFrom);
+                resolve(result);
+                timeoutId && clearTimeout(timeoutId);
+            });
         };
         
         const spawn = async (
@@ -176,7 +191,7 @@ export const prepareEnvironment = async (): Promise<CLITestEnvironment> => {
                     const { timeout, ignoreExit, checkHistory } = {
                         timeout: 5000,
                         ignoreExit: false,
-                        checkHistory: false,
+                        checkHistory: true,
                         ...options,
                     };
                     const processExited = exitCodeRef.current !== null;
@@ -188,7 +203,6 @@ export const prepareEnvironment = async (): Promise<CLITestEnvironment> => {
                         });
                         return;
                     }
-
                     
                     if (!ignoreExit && processExited) {
                         resolve({
@@ -236,12 +250,28 @@ export const prepareEnvironment = async (): Promise<CLITestEnvironment> => {
                     setTimeout(resolve, delay);
                 });
             };
-            const waitForFinish = async (): Promise<ExecResult> => {
+            const waitForFinish = async (timeout?: number): Promise<ExecResult> => {
                 if (currentProcessPromise) {
                     currentProcessRef.current?.stdin.end();
 
-                    return currentProcessPromise;
+                    return new Promise(async (resolve) => {
+                        let timeoutId: NodeJS.Timeout | undefined;
+                        if (timeout) {
+                            timeoutId = setTimeout(() => {
+                                resolve({
+                                    code: null,
+                                    stdout: output.stdout,
+                                    stderr: output.stderr,
+                                }); 
+                            }, timeout);
+                        }
+
+                        const execResult = await currentProcessPromise;
+                        resolve(execResult);
+                        timeoutId && clearTimeout(timeoutId);
+                    });
                 }
+                
                 return new Promise((resolve) => {
                     resolve({
                         code: exitCodeRef.current as ExitCode,
