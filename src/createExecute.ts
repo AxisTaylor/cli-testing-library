@@ -10,12 +10,13 @@ export const createExecute =
         base: string,
         output: Output,
         currentProcessRef?: { current: ChildProcessWithoutNullStreams | null },
-        exitCodeRef?: { current: ExitCode | null }
+        exitCodeRef?: { current: ExitCode | null },
     ) =>
     (
         runner: string,
         command: string,
-        runFrom?: string
+        runFrom?: string,
+        env?: Record<string, unknown>
     ): Promise<ExecResult> => {
         return new Promise((accept) => {
             output.replaceStrings = {
@@ -37,6 +38,7 @@ export const createExecute =
                 args,
                 {
                     cwd: runFrom ? path.join(base, runFrom) : path.join(base),
+                    env: { ...process.env, ...env } as NodeJS.ProcessEnv,
                 }
             );
 

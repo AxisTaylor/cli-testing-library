@@ -9,6 +9,7 @@ export type SpawnResult = {
             timeout?: number,
             ignoreExit?: boolean,
             checkHistory?: boolean,
+            useRegex?: boolean,
         }>,
     ) => Promise<{ line: string; type: "found" | "timeout" | "exit" }>;
     waitForFinish: () => Promise<ExecResult>;
@@ -36,12 +37,18 @@ export type CLITestEnvironment = {
     execute: (
         runner: string,
         command: string,
-        runFrom?: string,
-        timeout?: number,
+        options?: Partial<{
+            runFrom?: string,
+            timeout?: number,
+            env?: Record<string, unknown>,
+        }>,
     ) => Promise<ExecResult>;
     spawn: (
         runner: string,
         command: string,
-        runFrom?: string
+        options?: Partial<{
+            runFrom?: string,
+            env?: Record<string, unknown>,
+        }>,
     ) => Promise<SpawnResult>;
 };

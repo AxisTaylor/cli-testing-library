@@ -19,12 +19,13 @@ import {
 import path from 'path';
 import { promisify } from 'util';
 import { tmpdir } from 'os';
+import { escapeRegExp } from 'lodash';
+import { v4 } from 'uuid';
 import { CLITestEnvironment, SpawnResult } from './types';
 import { Output, OutputType } from './Output';
 import { checkRunningProcess } from './utils';
 import { createExecute, ExecResult, ExitCode } from './createExecute';
 import { keyToHEx, KeyMap } from './keyToHEx';
-import { v4 } from 'uuid';
 
 export type * from './types';
 export type * from './createExecute';
@@ -125,8 +126,11 @@ export const prepareEnvironment = async (): Promise<CLITestEnvironment> => {
         const execute = async (
             runner: string,
             command: string,
-            runFrom?: string,
-            timeout?: number
+            options?: Partial<{
+                runFrom?: string,
+                timeout?: number,
+                env: Record<string, unknown>,
+            }>
         ) => {
             const output = new Output();
             const currentProcessRef: {
@@ -136,24 +140,30 @@ export const prepareEnvironment = async (): Promise<CLITestEnvironment> => {
             const scopedExecute = createExecute(
                 tempDir,
                 output,
-                currentProcessRef
+                currentProcessRef,
+                undefined,
             );
 
             addTasks(jobId, currentProcessRef);
 
             return new Promise<ExecResult>(async (resolve) => {
                 let timeoutId: NodeJS.Timeout | undefined;
-                if (timeout) {
+                if (options?.timeout) {
                     timeoutId = setTimeout(() => {
                         resolve({
                             code: null,
                             stdout: output.stdout,
                             stderr: output.stderr,
                         });
-                    }, timeout);
+                    }, options.timeout);
                 }
 
-                const result = await scopedExecute(runner, command, runFrom);
+                const result = await scopedExecute(
+                    runner,
+                    command,
+                    options?.runFrom,
+                    options?.env
+                );
                 resolve(result);
                 timeoutId && clearTimeout(timeoutId);
             });
@@ -162,7 +172,10 @@ export const prepareEnvironment = async (): Promise<CLITestEnvironment> => {
         const spawn = async (
             runner: string,
             command: string,
-            runFrom?: string
+            options?: Partial<{
+                runFrom?: string,
+                env: Record<string, unknown>,
+            }>
         ): Promise<SpawnResult> => {
             const output = new Output();
             const currentProcessRef: {
@@ -175,12 +188,12 @@ export const prepareEnvironment = async (): Promise<CLITestEnvironment> => {
                 tempDir,
                 output,
                 currentProcessRef,
-                exitCodeRef
+                exitCodeRef,
             );
 
             addTasks(jobId, currentProcessRef);
 
-            currentProcessPromise = scopedExecute(runner, command, runFrom);
+            currentProcessPromise = scopedExecute(runner, command, options?.runFrom, options?.env);
 
             const waitForText = (
                 input: string,
@@ -188,18 +201,24 @@ export const prepareEnvironment = async (): Promise<CLITestEnvironment> => {
                     timeout: number,
                     ignoreExit: boolean,
                     checkHistory: boolean,
+                    useRegex: boolean,
                 }> = {}
             ): Promise<{ line: string; type: "found" | "timeout" | "exit" }> => {
                 return new Promise((resolve) => {
-                    const { timeout, ignoreExit, checkHistory } = {
+                    const { timeout, ignoreExit, checkHistory, useRegex } = {
                         timeout: 5000,
                         ignoreExit: false,
                         checkHistory: true,
+                        useRegex: false,
                         ...options,
                     };
                     const processExited = exitCodeRef.current !== null;
 
-                    if (checkHistory && String(output.stdout.join('\n') + output.stderr.join('\n')).includes(input)) {
+                    let expression = new RegExp(escapeRegExp(input), 'g');
+                    if (useRegex) {
+                        expression = new RegExp(input, 'g');
+                    }
+                    if (checkHistory && expression.test(output.stdout.join('\n') + output.stderr.join('\n'))) {
                         resolve({
                             type: 'found',
                             line: input,
@@ -226,7 +245,7 @@ export const prepareEnvironment = async (): Promise<CLITestEnvironment> => {
                     }, timeout);
 
                     const handler = (value: string) => {
-                        if (value.toString().includes(input)) {
+                        if (expression.test(value)) {
                             resolve({
                                 type: 'found',
                                 line: input,

@@ -49,6 +49,17 @@ yargs(hideBin(process.argv))
         await new Promise((resolve) => setTimeout(resolve, 5000));
         console.log('Done waiting');
     })
+    .command('env', 'print environment variables', () => {
+        console.log(
+            `- ${Object.keys(process.env)
+                .map((key) => `${key}: ${process.env[key]}`)
+                .join('\n- ')}
+            `
+        );
+    })
+    .command('random', 'print a phrase with random number', () => {
+        console.log(`${Math.ceil(Math.random() * 10)} dogs, ${Math.ceil(Math.random() * 20)} cats, and ${Math.ceil(Math.random() * 10)} birds`);
+    })
     .option('verbose', {
         alias: 'v',
         type: 'boolean',
