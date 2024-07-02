@@ -18,6 +18,11 @@ describe('Tests testing the CLI and so, the testing lib itself', () => {
                 './test/testing-cli.ts --help'
             )).exitCodeToBe(0);
 
+            await cleanup();
+        });
+        it('runs with execute and captures errors and time outs', async () => {
+            const { execute, cleanup } = await prepareEnvironment();
+
             expect(await execute(
                 'ts-node',
                 './test/testing-cli.ts error'
@@ -26,9 +31,32 @@ describe('Tests testing the CLI and so, the testing lib itself', () => {
             expect(await execute(
                 'ts-node',
                 './test/testing-cli.ts wait',
-                undefined,
-                1000,
+                { timeout: 1000 }
             )).exitCodeToBeNull();
+
+            await cleanup();
+        });
+
+        it('runs with spawn or execute and passes through environmental variables', async () => {
+            const { execute, spawn, cleanup } = await prepareEnvironment();
+
+            const executeResult = await execute(
+                'node',
+                './test/testing-cli-entry.js env',
+                { env: { HELLO: 'WORLD' } }
+            );
+            expect(executeResult).exitCodeToBe(0);
+            expect(executeResult.stdout).toContain('- HELLO: WORLD');
+
+            const { waitForText, waitForFinish } = await spawn(
+                'node',
+                './test/testing-cli-entry.js env',
+                { env: { HELLO: 'UNIVERSE', NODE_ENV: 'Yes' } }
+            );
+
+            expect(await waitForText('- HELLO: UNIVERSE')).toBeFoundInOutput();
+            expect(await waitForText('- NODE_ENV: Yes')).toBeFoundInOutput();
+            expect(await waitForFinish()).exitCodeToBe(0);
 
             await cleanup();
         });
@@ -51,6 +79,8 @@ describe('Tests testing the CLI and so, the testing lib itself', () => {
                   "testing-cli-entry.js error          exit with error",
                   "testing-cli-entry.js select         ask select input",
                   "testing-cli-entry.js wait           wait for 5 seconds",
+                  "testing-cli-entry.js env            print environment variables",
+                  "testing-cli-entry.js random         print a phrase with random number",
                   "Options:",
                   "--help     Show help                                             [boolean]",
                   "--version  Show version number                                   [boolean]",
@@ -154,6 +184,8 @@ describe('Tests testing the CLI and so, the testing lib itself', () => {
                               "testing-cli-entry.js error          exit with error",
                               "testing-cli-entry.js select         ask select input",
                               "testing-cli-entry.js wait           wait for 5 seconds",
+                              "testing-cli-entry.js env            print environment variables",
+                              "testing-cli-entry.js random         print a phrase with random number",
                               "Options:",
                               "--help     Show help                                             [boolean]",
                               "--version  Show version number                                   [boolean]",
@@ -260,6 +292,22 @@ describe('Tests testing the CLI and so, the testing lib itself', () => {
                 ],
             ]).toContainEqual(getStdout());
             expect(getExitCode()).toBe(0);
+
+            await cleanup();
+        });
+
+        it('should ask for text using regular expression', async () => {
+            const { spawn, cleanup } = await prepareEnvironment();
+
+            const {
+                waitForText,
+                waitForFinish,
+            } = await spawn('node', './test/testing-cli-entry.js random');
+
+            expect(
+                await waitForText('\\d+ dogs, \\d+ cats, and \\d+ birds', { useRegex: true })
+            ).toBeFoundInOutput();
+            expect(await waitForFinish()).exitCodeToBe(0);
 
             await cleanup();
         });
