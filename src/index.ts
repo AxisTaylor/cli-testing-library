@@ -20,7 +20,7 @@ import path from 'path';
 import { promisify } from 'util';
 import { tmpdir } from 'os';
 import { escapeRegExp } from 'lodash';
-import { v4 } from 'uuid';
+import { nanoid } from 'nanoid/non-secure';
 import { CLITestEnvironment, SpawnResult } from './types';
 import { Output, OutputType } from './Output';
 import { checkRunningProcess } from './utils';
@@ -59,7 +59,7 @@ declare global {
 }
 
 const newJob = (dir: string, cleanupStatusRef: CleanupStatus) => {
-    const id = v4();
+    const id = nanoid();
     globalThis.jobs[id] = {
         id,
         dir,
