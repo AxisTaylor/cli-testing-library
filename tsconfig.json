@@ -4,8 +4,6 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "module": "NodeNext",
-    "moduleResolution": "nodenext",
   },
   "include": ["src/**/*", "matchers/**/*"],
   "exclude": ["node_modules/**/*"]

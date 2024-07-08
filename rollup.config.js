@@ -35,18 +35,20 @@ export default [
       'path',
       'util',
       'os',
+      'crypto',
     ],
   },
   {
     input: "src/index.ts",
     output: [{ file: packageJson.exports["."].types, format: "es" }],
-    plugins: [dts()],
+    plugins: [dts(), typescript({ tsconfig: './tsconfig.json' })],
     external: [
       'child_process',
       'fs',
       'path',
       'util',
       'os',
+      'crypto',
     ],
   },
   {

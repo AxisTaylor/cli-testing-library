@@ -14,6 +14,10 @@
       "require": "./lib/cjs/jest.cjs"
     }
   },
+  "files": [
+    "lib",
+    "LICENSE"
+  ],
   "scripts": {
     "dev": "npm run watch:lib",
     "build:cleanup": "rm -rf lib && rm -rf dist",
@@ -32,8 +36,7 @@
   },
   "dependencies": {
     "keycode": "^2.2.1",
-    "lodash": "^4.17.21",
-    "nanoid": "^3.3.7"
+    "lodash": "^4.17.21"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^26.0.1",
